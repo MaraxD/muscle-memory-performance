@@ -6,6 +6,9 @@
  */
 
 #include "BLEDevice.h"
+#include <esp_wifi.h>
+#include <esp_now.h>
+#include <WiFi.h>
 //#include "BLEScan.h"
 
 // The remote service we wish to connect to.
@@ -19,11 +22,51 @@ static boolean doScan = false;
 static BLERemoteCharacteristic *pRemoteCharacteristic;
 static BLEAdvertisedDevice *myDevice;
 
+// mac addres of the esp plugged in the laptop
+uint8_t broadcastAddress[] = { 0xF4, 0x65, 0x0B, 0xBF, 0x91, 0x7C };
+
+esp_now_peer_info_t peerInfo;
+
+// Variable to store if sending data was successful
+String success;
+
+typedef struct struct_message {
+  int heartbeat;
+} struct_message;
+
+struct_message garminReadings;
+
+// Callback when data is sent
+void OnDataSent(const wifi_tx_info_t *info, esp_now_send_status_t status) {
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  if (status ==0){
+    success = "Delivery Success :)";
+  }
+  else{
+    success = "Delivery Fail :(";
+  }
+}
+
+void readMacAddress() {
+  uint8_t baseMac[6];
+  esp_err_t ret = esp_wifi_get_mac(WIFI_IF_STA, baseMac);
+  if (ret == ESP_OK) {
+    Serial.printf("%hhX:%hhX:%hhX:%hhX:%hhX:%hhX",
+                  baseMac[0], baseMac[1], baseMac[2],
+                  baseMac[3], baseMac[4], baseMac[5]);
+  } else {
+    Serial.println("Failed to read MAC address");
+  }
+}
+
 // Callback function to handle notifications
 static void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify) {
   // The Heart Rate value is usually in the second byte of the packet
   int heartRate = pData[1]; 
-  Serial.println(heartRate);
+  garminReadings.heartbeat=heartRate;
+  // Serial.println(heartRate);
+  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&garminReadings, sizeof(garminReadings));
 }
 
 class MyClientCallback : public BLEClientCallbacks {
@@ -121,6 +164,40 @@ void setup() {
   pBLEScan->setWindow(449);
   pBLEScan->setActiveScan(true);
   pBLEScan->start(5, false);
+
+  // Set device as a Wi-Fi Station
+
+  // Init ESP-NOW
+  WiFi.mode(WIFI_STA);  // Set ESP32 to Station mode
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  } else {
+    Serial.print("Established connection");
+  }
+
+  // Once ESPNow is successfully Init, we will register for Send CB to
+  // get the status of Trasnmitted packet
+  esp_now_register_send_cb(OnDataSent);
+
+  // Register peer
+  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+
+  // Add peer
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+    Serial.println("Failed to add peer");
+    return;
+  }
+
+  // !! only to be executed in the beginning, when new boards are connected !!
+  // WiFi.mode(WIFI_STA);
+  // WiFi.STA.begin();
+
+  // Serial.print("[DEFAULT] ESP32 Board MAC Address: ");
+  // readMacAddress();
+
 }  // End of setup.
 
 // This is the Arduino main loop function.
@@ -141,14 +218,13 @@ void loop() {
   // If we are connected to a peer BLE Server, update the characteristic each time we are reached
   // with the current time since boot.
   if (!connected && doScan) {
-    // try reconnecting again to the ble device
+    // try reconnecting again to the BLE device after disconnecting
     BLEScan *pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
     pBLEScan->setInterval(1349);
     pBLEScan->setWindow(449);
     pBLEScan->setActiveScan(true);
     pBLEScan->start(5, false);
-    
   } 
 
   delay(1000);  // Delay a second between loops.

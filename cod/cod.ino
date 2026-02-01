@@ -1,29 +1,103 @@
-const int ECG_PIN = 34;      // Semnal analogic ECG
-const int LO_PLUS = 33;      // Detectie deconectare electrozi LO+
-const int LO_MINUS = 32;     // Detectie deconectare electrozi LO-
+#include <WiFi.h>
+#include <esp_wifi.h>
+#include <esp_now.h>
 
-void setup() {
-Serial.begin(9600);  
+// mac addres of the esp on the performer
+uint8_t broadcastAddress[] = {0xD8, 0x3B, 0xDA, 0x99, 0x61, 0xAC};
 
-pinMode(LO_PLUS, INPUT);
-pinMode(LO_MINUS, INPUT);
+// Create a struct_message to hold incoming sensor readings
+typedef struct struct_message {
+  int heartbeat;
+} struct_message;
+
+struct_message incomingReadings;
+int heartbeat=0;
+
+esp_now_peer_info_t peerInfo;
+
+// Callback when data is received
+void OnDataRecv(const esp_now_recv_info_t *recv_info, const uint8_t *incomingData, int len) {
+  memcpy(&incomingReadings, incomingData, sizeof(incomingReadings));
+  heartbeat = incomingReadings.heartbeat;
 }
 
-
-void loop() {
-int loPlusState = digitalRead(LO_PLUS);
-int loMinusState = digitalRead(LO_MINUS);  
-
-  // Verificam daca electrozii sunt deconectati
-
-if (loPlusState == HIGH || loMinusState == HIGH) {
-  Serial.println("!!! ELECTROZI DECONTECTATI !!!");
+void readMacAddress() {
+  uint8_t baseMac[6];
+  esp_err_t ret = esp_wifi_get_mac(WIFI_IF_STA, baseMac);
+  if (ret == ESP_OK) {
+    Serial.printf("%02x:%02x:%02x:%02x:%02x:%02x\n",
+                  baseMac[0], baseMac[1], baseMac[2],
+                  baseMac[3], baseMac[4], baseMac[5]);
   } else {
+    Serial.println("Failed to read MAC address");
+  }
+}
 
-  // Citim semnalul ECG
-  int ecgValue = analogRead(ECG_PIN);
-  Serial.println(ecgValue); // pentru Serial Plotter
+void setup(){
+  Serial.begin(115200);  
+
+  // !! only to be executed in the beginning, when new boards are connected !!
+  // WiFi.mode(WIFI_STA);
+  // WiFi.STA.begin();
+
+  // Serial.print("[DEFAULT] ESP32 Board MAC Address: ");
+  // readMacAddress();
+
+  // Set device as a Wi-Fi Station
+  WiFi.mode(WIFI_STA);
+  // Init ESP-NOW
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
   }
 
-delay(100); // ritm de esantionare rapid
+  // Register peer
+  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+
+  // Add peer
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+    Serial.println("Failed to add peer");
+    return;
+  }
+  // Register for a callback function that will be called when data is received
+  esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
 }
+
+void loop(){
+  Serial.print("heartbeat: ");
+  Serial.println(heartbeat);
+
+  delay(1000);
+}
+
+// const int ECG_PIN = 34;      // Semnal analogic ECG
+// const int LO_PLUS = 33;      // Detectie deconectare electrozi LO+
+// const int LO_MINUS = 32;     // Detectie deconectare electrozi LO-
+
+// void setup() {
+// Serial.begin(9600);  
+
+// pinMode(LO_PLUS, INPUT);
+// pinMode(LO_MINUS, INPUT);
+// }
+
+
+// void loop() {
+// int loPlusState = digitalRead(LO_PLUS);
+// int loMinusState = digitalRead(LO_MINUS);  
+
+//   // Verificam daca electrozii sunt deconectati
+
+// if (loPlusState == HIGH || loMinusState == HIGH) {
+//   Serial.println("!!! ELECTROZI DECONTECTATI !!!");
+//   } else {
+
+//   // Citim semnalul ECG
+//   int ecgValue = analogRead(ECG_PIN);
+//   Serial.println(ecgValue); // pentru Serial Plotter
+//   }
+
+// delay(100); // ritm de esantionare rapid
+// }
