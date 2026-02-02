@@ -32,11 +32,11 @@ EMG | ESP32                 | Info |
 SIG | 4 (or any analog pin) | Signal
 
 ## Broadcasting heartbeat data to ESP
-Make sure your smartwatch has a heartbeat sensor and can also _broadcast data_. BLE devices with a heart rate monitor usually have the service UUID set to `180D` (heart rate service) and the client UUID to `2A37` (heart rate measurement characteristic), but if that's not the case you can verify the UUIDs using nRF Connect and modify tha values inside `ble_client/ble_client.ino`.
+Make sure your smartwatch has a heartbeat sensor and can also _broadcast data_. BLE devices with a heart rate monitor usually have the service UUID set to `180D` (heart rate service) and the client UUID to `2A37` (heart rate measurement characteristic), but if that's not the case you can verify the UUIDs using nRF Connect and modify the values inside `ble_client/ble_client.ino`.
 <br>
 
 If everything is set up correctly it's time to broadcast the data. On my Garmin watch, in order to do that, I had to: hold the 'up' key -> sensors & accesories -> wrist heart rate -> broadcast heart rate. The watch should automatically connect to the ESP.
 <br>
 
-**If the ESP does not find the smartwatch, try disconnecting it completely from your phone and turn off the bluetooth and try again.**
+**If the ESP does not find the smartwatch, try disconnecting it completely from your phone, turn off the bluetooth and try again.**
 
