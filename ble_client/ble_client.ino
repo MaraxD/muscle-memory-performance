@@ -30,11 +30,14 @@ esp_now_peer_info_t peerInfo;
 // Variable to store if sending data was successful
 String success;
 
+int muscleAnalogPin=4;
+
 typedef struct struct_message {
   int heartbeat;
+  int muscleTension;
 } struct_message;
 
-struct_message garminReadings;
+struct_message sensorsReadings;
 
 // Callback when data is sent
 void OnDataSent(const wifi_tx_info_t *info, esp_now_send_status_t status) {
@@ -64,9 +67,9 @@ void readMacAddress() {
 static void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify) {
   // The Heart Rate value is usually in the second byte of the packet
   int heartRate = pData[1]; 
-  garminReadings.heartbeat=heartRate;
+  sensorsReadings.heartbeat=heartRate;
   // Serial.println(heartRate);
-  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&garminReadings, sizeof(garminReadings));
+  
 }
 
 class MyClientCallback : public BLEClientCallbacks {
@@ -140,7 +143,6 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
 
     // We have found a device, let us now see if it contains the service we are looking for.
     if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID)) {
-
       BLEDevice::getScan()->stop();
       myDevice = new BLEAdvertisedDevice(advertisedDevice);
       doConnect = true;
@@ -154,6 +156,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Starting Arduino BLE Client application...");
   BLEDevice::init("");
+  pinMode(muscleAnalogPin, INPUT);
 
   // Retrieve a Scanner and set the callback we want to use to be informed when we
   // have detected a new device.  Specify that we want active scanning and start the
@@ -209,6 +212,10 @@ void loop() {
   if (doConnect == true) {
     if (connectToServer()) {
       Serial.println("We are now connected to the BLE Server.");
+
+      // sending data to the other esp
+      sensorsReadings.muscleTension=analogRead(muscleAnalogPin);
+      esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&sensorsReadings, sizeof(sensorsReadings));
     } else {
       Serial.println("We have failed to connect to the server; there is nothing more we will do.");
     }

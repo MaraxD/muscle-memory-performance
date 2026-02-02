@@ -8,10 +8,11 @@ uint8_t broadcastAddress[] = {0xD8, 0x3B, 0xDA, 0x99, 0x61, 0xAC};
 // Create a struct_message to hold incoming sensor readings
 typedef struct struct_message {
   int heartbeat;
+  int muscleTension;
 } struct_message;
 
 struct_message incomingReadings;
-int heartbeat=0;
+int heartbeat=0, muscleTension=0;
 
 esp_now_peer_info_t peerInfo;
 
@@ -19,6 +20,7 @@ esp_now_peer_info_t peerInfo;
 void OnDataRecv(const esp_now_recv_info_t *recv_info, const uint8_t *incomingData, int len) {
   memcpy(&incomingReadings, incomingData, sizeof(incomingReadings));
   heartbeat = incomingReadings.heartbeat;
+  muscleTension=incomingReadings.muscleTension;
 }
 
 void readMacAddress() {
@@ -67,37 +69,15 @@ void setup(){
 
 void loop(){
   Serial.print("heartbeat: ");
-  Serial.println(heartbeat);
+  Serial.print(heartbeat);
+
+  Serial.print(", muscle tension: ");
+  Serial.println(muscleTension);
 
   delay(1000);
 }
 
-// const int ECG_PIN = 34;      // Semnal analogic ECG
-// const int LO_PLUS = 33;      // Detectie deconectare electrozi LO+
-// const int LO_MINUS = 32;     // Detectie deconectare electrozi LO-
-
-// void setup() {
-// Serial.begin(9600);  
-
-// pinMode(LO_PLUS, INPUT);
-// pinMode(LO_MINUS, INPUT);
-// }
 
 
-// void loop() {
-// int loPlusState = digitalRead(LO_PLUS);
-// int loMinusState = digitalRead(LO_MINUS);  
 
-//   // Verificam daca electrozii sunt deconectati
 
-// if (loPlusState == HIGH || loMinusState == HIGH) {
-//   Serial.println("!!! ELECTROZI DECONTECTATI !!!");
-//   } else {
-
-//   // Citim semnalul ECG
-//   int ecgValue = analogRead(ECG_PIN);
-//   Serial.println(ecgValue); // pentru Serial Plotter
-//   }
-
-// delay(100); // ritm de esantionare rapid
-// }
