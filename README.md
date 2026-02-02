@@ -27,8 +27,8 @@ An interactive performance that explores the mourning of one’s past and the pe
 ## Wiring up the muscle sensor (EMG) to the main ESP32 board
 EMG | ESP32                 | Info | 
 --- |-----------------------| --- 
-- | 3.3V                  | Power
-+ | GND                   | Ground 
+"-" | 3.3V                  | Power
+"+" | GND                   | Ground 
 SIG | 4 (or any analog pin) | Signal
 
 ## Broadcasting heartbeat data to ESP
