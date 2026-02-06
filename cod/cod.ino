@@ -68,10 +68,9 @@ void setup(){
 }
 
 void loop(){
-  Serial.print("heartbeat: ");
-  Serial.print(heartbeat);
+  // Serial.print(heartbeat);
 
-  Serial.print(", muscle tension: ");
+  // Serial.print(" ");
   Serial.println(muscleTension);
 
   delay(1000);

@@ -22,15 +22,15 @@ static boolean doScan = false;
 static BLERemoteCharacteristic *pRemoteCharacteristic;
 static BLEAdvertisedDevice *myDevice;
 
-// mac addres of the esp plugged in the laptop
-uint8_t broadcastAddress[] = { 0xF4, 0x65, 0x0B, 0xBF, 0x91, 0x7C };
+// mac addres of the esp plugged in the 
+uint8_t broadcastAddress[] = { 0xF4, 0X65, 0X0B, 0XBF, 0XAB, 0X5C };
 
 esp_now_peer_info_t peerInfo;
 
 // Variable to store if sending data was successful
 String success;
 
-int muscleAnalogPin=4;
+int muscleAnalogPin=5;
 
 typedef struct struct_message {
   int heartbeat;
@@ -68,6 +68,8 @@ static void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, ui
   // The Heart Rate value is usually in the second byte of the packet
   int heartRate = pData[1]; 
   sensorsReadings.heartbeat=heartRate;
+  sensorsReadings.muscleTension=analogRead(muscleAnalogPin);
+  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&sensorsReadings, sizeof(sensorsReadings));
   // Serial.println(heartRate);
   
 }
@@ -161,12 +163,12 @@ void setup() {
   // Retrieve a Scanner and set the callback we want to use to be informed when we
   // have detected a new device.  Specify that we want active scanning and start the
   // scan to run for 5 seconds.
-  BLEScan *pBLEScan = BLEDevice::getScan();
-  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-  pBLEScan->setInterval(1349);
-  pBLEScan->setWindow(449);
-  pBLEScan->setActiveScan(true);
-  pBLEScan->start(5, false);
+  // BLEScan *pBLEScan = BLEDevice::getScan();
+  // pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  // pBLEScan->setInterval(1349);
+  // pBLEScan->setWindow(449);
+  // pBLEScan->setActiveScan(true);
+  // pBLEScan->start(5, false);
 
   // Set device as a Wi-Fi Station
 
@@ -205,34 +207,36 @@ void setup() {
 
 // This is the Arduino main loop function.
 void loop() {
+  sensorsReadings.muscleTension=analogRead(muscleAnalogPin);
+  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&sensorsReadings, sizeof(sensorsReadings));
 
   // If the flag "doConnect" is true then we have scanned for and found the desired
   // BLE Server with which we wish to connect.  Now we connect to it.  Once we are
   // connected we set the connected flag to be true.
-  if (doConnect == true) {
-    if (connectToServer()) {
-      Serial.println("We are now connected to the BLE Server.");
+  // if (doConnect == true) {
+    
+  //   if (connectToServer()) {
+  //     Serial.println("We are now connected to the BLE Server.");
 
-      // sending data to the other esp
-      sensorsReadings.muscleTension=analogRead(muscleAnalogPin);
-      esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&sensorsReadings, sizeof(sensorsReadings));
-    } else {
-      Serial.println("We have failed to connect to the server; there is nothing more we will do.");
-    }
-    doConnect = false;
-  }
+  //     // sending data to the other esp
+      
+  //   } else {
+  //     Serial.println("We have failed to connect to the server; there is nothing more we will do.");
+  //   }
+  //   doConnect = false;
+  // }
 
   // If we are connected to a peer BLE Server, update the characteristic each time we are reached
   // with the current time since boot.
-  if (!connected && doScan) {
-    // try reconnecting again to the BLE device after disconnecting
-    BLEScan *pBLEScan = BLEDevice::getScan();
-    pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-    pBLEScan->setInterval(1349);
-    pBLEScan->setWindow(449);
-    pBLEScan->setActiveScan(true);
-    pBLEScan->start(5, false);
-  } 
+  // if (!connected && doScan) {
+  //   // try reconnecting again to the BLE device after disconnecting
+  //   BLEScan *pBLEScan = BLEDevice::getScan();
+  //   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  //   pBLEScan->setInterval(1349);
+  //   pBLEScan->setWindow(449);
+  //   pBLEScan->setActiveScan(true);
+  //   pBLEScan->start(5, false);
+  // } 
 
   delay(1000);  // Delay a second between loops.
 }  // End of loop
